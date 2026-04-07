@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rose Garden</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background-color: #f0f7f0; /* Світло-зелений фон */
+            font-family: sans-serif;
+            text-align: center;
+            color: #2d4a2d;
+        }
+        .container { padding: 20px; }
+        
+        #plant-img {
+            width: 250px;
+            height: 250px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Твоя ЗЕЛЕНА кнопка */
+        .btn-water {
+            background-color: #4CAF50; /* Насичений зелений */
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            transition: 0.3s;
+        }
+        
+        .btn-water:active {
+            transform: scale(0.95);
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="status-text">Мій росток</h1>
+        <img id="plant-img" src="stage1.png" alt="Rose">
+        <br><br>
+        <button class="btn-water" onclick="waterPlant()">💧 Полити за рекламу</button>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Розгортає додаток на весь екран
+
+        function waterPlant() {
+            // Тут ми потім підключимо Adsgram
+            alert("Дивимось рекламу...");
+            
+            // Після реклами відправляємо дані боту
+            tg.sendData("watered"); 
+        }
+    </script>
+</body>
+</html>
