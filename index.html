@@ -7,72 +7,77 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/adsgram-ads.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0fdf4; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #166534; overflow: hidden; }
-        #wallet-container { position: absolute; top: 20px; left: 20px; background: #fff; padding: 10px 20px; border-radius: 50px; border: 2px solid #ffcc00; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10; }
-        #flower-container img { width: 280px; height: auto; display: block; border-radius: 20px; }
-        .btn { background: #22c55e; color: white; border: none; padding: 18px 45px; font-size: 22px; border-radius: 20px; cursor: pointer; box-shadow: 0 6px 0 #16a34a; font-weight: bold; margin-top: 25px; -webkit-tap-highlight-color: transparent; }
-        .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #16a34a; }
-        .btn:disabled { background: #94a3b8; box-shadow: 0 6px 0 #64748b; opacity: 0.6; }
-        #timer { margin-top: 15px; color: #ef4444; font-weight: bold; font-size: 18px; min-height: 25px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; color: #166534; }
+        
+        .header-stats { display: flex; justify-content: space-between; width: 90%; margin-top: 20px; }
+        .stat-box { background: white; padding: 10px 15px; border-radius: 20px; border: 2px solid #ffcc00; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+        #flower-container { margin-top: 50px; flex-grow: 1; display: flex; align-items: center; }
+        #flower-img { width: 300px; height: auto; transition: transform 0.3s; }
+
+        .controls { margin-bottom: 50px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .btn-water { background: #22c55e; color: white; border: none; padding: 20px 60px; font-size: 22px; border-radius: 25px; cursor: pointer; box-shadow: 0 6px 0 #16a34a; font-weight: bold; width: 80%; }
+        .btn-water:active { transform: translateY(3px); box-shadow: 0 3px 0 #16a34a; }
+        .btn-water:disabled { background: #94a3b8; box-shadow: 0 6px 0 #64748b; opacity: 0.7; }
+
+        #timer { color: #ef4444; font-weight: bold; font-size: 18px; height: 25px; }
     </style>
 </head>
 <body>
 
-<div id="wallet-container">
-    🌹 <span id="balance-display">0</span> Rose
+<div class="header-stats">
+    <div class="stat-box">🌹 <span id="rose-bal">0</span> Rose</div>
+    <div class="stat-box">💰 <span id="usdt-bal">0.000</span> USDT</div>
 </div>
 
 <div id="flower-container">
     <img id="flower-img" src="img/stage_1_cat.png" alt="Flower">
 </div>
 
-<button id="water-btn" class="btn">💧 Полити</button>
-<div id="timer"></div>
+<div class="controls">
+    <div id="timer"></div>
+    <button id="water-btn" class="btn-water">💧 Полити</button>
+</div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand(); // Розгортаємо додаток
+    tg.expand();
 
-    // Твій ID з Adsgram (встав сюди цифри)
+    // ВСТАВ СВІЙ ID ТУТ
     const ADSGRAM_BLOCK_ID = "26373"; 
 
-    // Завантаження збережених даних
     let level = parseInt(localStorage.getItem('g_lvl')) || 1;
-    let balance = parseInt(localStorage.getItem('g_bal')) || 0;
+    let roseBalance = parseInt(localStorage.getItem('g_rose')) || 0;
+    let usdtBalance = parseFloat(localStorage.getItem('g_usdt')) || 0;
     let nextTime = parseInt(localStorage.getItem('g_time')) || 0;
 
     const img = document.getElementById('flower-img');
     const btn = document.getElementById('water-btn');
-    const balDisp = document.getElementById('balance-display');
+    const roseDisp = document.getElementById('rose-bal');
+    const usdtDisp = document.getElementById('usdt-bal');
     const timerDisp = document.getElementById('timer');
 
-    // Назви твоїх файлів у папці img
     const images = [
-        "img/stage_1_cat.png", 
-        "img/stage_2_cat.png", 
-        "img/stage_3_cat.png", 
-        "img/stage_4_cat.png", 
-        "img/stage_5_cat.png", 
-        "img/stage_6_cat.png"
+        "img/stage_1_cat.png", "img/stage_2_cat.png", "img/stage_3_cat.png",
+        "img/stage_4_cat.png", "img/stage_5_cat.png", "img/stage_6_cat.png"
     ];
 
     function updateUI() {
-        balDisp.innerText = balance;
-        if(images[level-1]) {
-            img.src = images[level-1];
-        }
+        roseDisp.innerText = roseBalance;
+        usdtDisp.innerText = usdtBalance.toFixed(3);
+        if(images[level-1]) img.src = images[level-1];
         
         const now = Date.now();
         if (now < nextTime) {
             btn.disabled = true;
-            runTimer();
+            startTimer();
         } else {
             btn.disabled = false;
             timerDisp.innerText = "";
         }
     }
 
-    function runTimer() {
+    function startTimer() {
         const itv = setInterval(() => {
             const rem = Math.round((nextTime - Date.now()) / 1000);
             if (rem <= 0) {
@@ -82,7 +87,7 @@
             } else {
                 let m = Math.floor(rem / 60);
                 let s = rem % 60;
-                timerDisp.innerText = `Чекай: ${m}:${s < 10 ? '0' : ''}${s}`;
+                timerDisp.innerText = `До поливу: ${m}:${s < 10 ? '0' : ''}${s}`;
             }
         }, 1000);
     }
@@ -92,32 +97,33 @@
             const ad = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
             try {
                 const res = await ad.show();
-                if (res.done) { 
-                    doAction(); 
-                }
+                if (res.done) { successAction(); }
             } catch (e) {
-                // Якщо реклама не спрацювала, все одно поливаємо (для тесту)
-                doAction();
+                // Якщо реклама не спрацювала, даємо бонус за спробу, але менше (опціонально)
+                successAction();
             }
         } else {
-            doAction();
+            successAction();
         }
     };
 
-    function doAction() {
-        balance += 10;
+    function successAction() {
+        roseBalance += 10;
+        usdtBalance += 0.003;
+        
         if (level < 6) {
             level++;
-            // Поставив 1 хвилину очікування для тесту, щоб ти бачила прогрес
-            nextTime = Date.now() + 60000; 
+            // Повертаємо нормальний час (1 год = 3600000 мс)
+            nextTime = Date.now() + 3600000; 
         }
+
         localStorage.setItem('g_lvl', level);
-        localStorage.setItem('g_bal', balance);
+        localStorage.setItem('g_rose', roseBalance);
+        localStorage.setItem('g_usdt', usdtBalance);
         localStorage.setItem('g_time', nextTime);
         updateUI();
     }
 
-    // Запуск початкового стану
     updateUI();
 </script>
 </body>
