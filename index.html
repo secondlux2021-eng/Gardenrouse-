@@ -7,13 +7,12 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/adsgram-ads.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0fdf4; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; color: #166534; }
-        #wallet-container { position: absolute; top: 20px; left: 20px; background: #fff; padding: 8px 16px; border-radius: 50px; border: 2px solid #ffd700; display: flex; align-items: center; gap: 10px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #flower-container { font-size: 120px; margin-bottom: 20px; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
-        .btn { background: #22c55e; color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 0 #16a34a; font-weight: bold; }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #16a34a; }
-        .btn:disabled { background: #94a3b8; box-shadow: 0 5px 0 #64748b; opacity: 0.7; }
-        #timer { margin-top: 15px; color: #ef4444; font-weight: bold; font-size: 18px; min-height: 24px; }
+        body { font-family: sans-serif; background: #f0fdf4; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #166534; }
+        #wallet-container { position: absolute; top: 20px; left: 20px; background: #fff; padding: 8px 16px; border-radius: 50px; border: 2px solid #ffd700; display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        #flower-container img { width: 250px; height: auto; }
+        .btn { background: #22c55e; color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 15px; cursor: pointer; box-shadow: 0 5px 0 #16a34a; font-weight: bold; }
+        .btn:disabled { background: #94a3b8; box-shadow: 0 5px 0 #64748b; }
+        #timer { margin-top: 15px; color: #ef4444; font-weight: bold; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -22,85 +21,100 @@
     <span>💰</span> <span id="balance-display">0.00</span> <span>USDT</span>
 </div>
 
-<div id="flower-container">🌱</div>
+<div id="flower-container">
+    <img id="flower-img" src="https://secondlux2021-eng.github.io/Gardenrouse-/img/rostok.png" alt="Flower">
+</div>
 <button id="water-btn" class="btn">💧 Полити</button>
 <div id="timer"></div>
 
 <script>
-    // === КОНФІГУРАЦІЯ ===
-    const ADSGRAM_BLOCK_ID = "27250"; 
-    const stages = ["🌱", "🌿", "🎋", "🌵", "🎍", "🌹"];
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Розгортаємо на все вікно
 
-    // Завантаження даних з пам'яті телефону
+    // ВСТАВ СВІЙ ID ТУТ
+    const ADSGRAM_BLOCK_ID = "26373"; 
+
     let level = parseInt(localStorage.getItem('garden_level')) || 1;
     let balance = parseFloat(localStorage.getItem('garden_balance')) || 0;
     let nextWaterTime = parseInt(localStorage.getItem('next_water_time')) || 0;
 
-    const flower = document.getElementById('flower-container');
+    const img = document.getElementById('flower-img');
     const btn = document.getElementById('water-btn');
     const timerText = document.getElementById('timer');
     const balanceText = document.getElementById('balance-display');
 
-    // Ініціалізація стану при запуску
-    updateUI();
-    checkTimer();
-
-    const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
-
-    btn.onclick = async () => {
-        try {
-            const result = await AdController.show();
-            if (result.done) {
-                balance += 10;
-                grow();
-                saveData();
-            }
-        } catch (e) {
-            alert("Реклама готується, спробуйте ще раз через хвилину!");
-        }
-    };
-
-    function grow() {
-        if (level < 6) {
-            level++;
-            let waitTime = level <= 3 ? 3600 : 14400; // 1 год або 4 год
-            nextWaterTime = Date.now() + (waitTime * 1000);
-            updateUI();
-            checkTimer();
-        } else {
-            alert("Ваша троянда розквітла! Ви справжній майстер! 🌹");
-        }
-    }
+    // Шляхи до твоїх картинок (перевір, щоб назви файлів були правильні)
+    const images = [
+        "img/rostok.png",
+        "img/level2.png", 
+        "img/level3.png",
+        "img/level4.png",
+        "img/level5.png",
+        "img/rose.png"
+    ];
 
     function updateUI() {
-        flower.innerText = stages[level - 1];
+        if(images[level-1]) img.src = images[level-1];
         balanceText.innerText = (balance / 100).toFixed(2);
     }
 
-    function saveData() {
-        localStorage.setItem('garden_level', level);
-        localStorage.setItem('garden_balance', balance);
-        localStorage.setItem('next_water_time', nextWaterTime);
+    function checkTimer() {
+        const now = Date.now();
+        if (now < nextWaterTime) {
+            btn.disabled = true;
+            startCountdown();
+        } else {
+            btn.disabled = false;
+        }
     }
 
-    function checkTimer() {
+    function startCountdown() {
         const interval = setInterval(() => {
-            let now = Date.now();
-            let remain = Math.round((nextWaterTime - now) / 1000);
-
+            const remain = Math.round((nextWaterTime - Date.now()) / 1000);
             if (remain <= 0) {
                 clearInterval(interval);
                 btn.disabled = false;
                 timerText.innerText = "";
             } else {
-                btn.disabled = true;
-                let h = Math.floor(remain / 3600);
-                let m = Math.floor((remain % 3600) / 60);
+                let m = Math.floor(remain / 60);
                 let s = remain % 60;
-                timerText.innerText = `Наступний полив: ${h > 0 ? h + 'г ' : ''}${m}хв ${s}с`;
+                timerText.innerText = `До поливу: ${m}:${s < 10 ? '0' : ''}${s}`;
             }
         }, 1000);
     }
+
+    btn.onclick = async () => {
+        if (window.Adsgram) {
+            const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
+            try {
+                const result = await AdController.show();
+                if (result.done) { 
+                    processGrowth(); 
+                }
+            } catch (e) {
+                // Якщо реклама не вантажиться, даємо поливати без неї (щоб кнопка працювала!)
+                processGrowth();
+            }
+        } else {
+            processGrowth();
+        }
+    };
+
+    function processGrowth() {
+        balance += 10;
+        if (level < 6) {
+            level++;
+            nextWaterTime = Date.now() + 30000; // ТИМЧАСОВО 30 СЕКУНД для тесту!
+        }
+        localStorage.setItem('garden_level', level);
+        localStorage.setItem('garden_balance', balance);
+        localStorage.setItem('next_water_time', nextWaterTime);
+        updateUI();
+        checkTimer();
+    }
+
+    updateUI();
+    checkTimer();
 </script>
 </body>
 </html>
