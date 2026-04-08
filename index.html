@@ -7,114 +7,118 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/adsgram-ads.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0fdf4; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #166534; }
-        #wallet-container { position: absolute; top: 20px; left: 20px; background: #fff; padding: 8px 16px; border-radius: 50px; border: 2px solid #ffd700; display: flex; align-items: center; gap: 8px; font-weight: bold; }
-        #flower-container img { width: 250px; height: auto; }
-        .btn { background: #22c55e; color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 15px; cursor: pointer; box-shadow: 0 5px 0 #16a34a; font-weight: bold; }
-        .btn:disabled { background: #94a3b8; box-shadow: 0 5px 0 #64748b; }
-        #timer { margin-top: 15px; color: #ef4444; font-weight: bold; font-size: 18px; }
+        body { font-family: sans-serif; background: #f0fdf4; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #166534; overflow: hidden; }
+        #wallet-container { position: absolute; top: 20px; left: 20px; background: #fff; padding: 10px 20px; border-radius: 50px; border: 2px solid #ffcc00; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10; }
+        #flower-container img { width: 280px; height: auto; display: block; border-radius: 20px; }
+        .btn { background: #22c55e; color: white; border: none; padding: 18px 45px; font-size: 22px; border-radius: 20px; cursor: pointer; box-shadow: 0 6px 0 #16a34a; font-weight: bold; margin-top: 25px; -webkit-tap-highlight-color: transparent; }
+        .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #16a34a; }
+        .btn:disabled { background: #94a3b8; box-shadow: 0 6px 0 #64748b; opacity: 0.6; }
+        #timer { margin-top: 15px; color: #ef4444; font-weight: bold; font-size: 18px; min-height: 25px; }
     </style>
 </head>
 <body>
 
 <div id="wallet-container">
-    <span>💰</span> <span id="balance-display">0.00</span> <span>USDT</span>
+    🌹 <span id="balance-display">0</span> Rose
 </div>
 
 <div id="flower-container">
-    <img id="flower-img" src="https://secondlux2021-eng.github.io/Gardenrouse-/img/rostok.png" alt="Flower">
+    <img id="flower-img" src="img/stage_1_cat.png" alt="Flower">
 </div>
+
 <button id="water-btn" class="btn">💧 Полити</button>
 <div id="timer"></div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand(); // Розгортаємо на все вікно
+    tg.expand(); // Розгортаємо додаток
 
-    // ВСТАВ СВІЙ ID ТУТ
+    // Твій ID з Adsgram (встав сюди цифри)
     const ADSGRAM_BLOCK_ID = "26373"; 
 
-    let level = parseInt(localStorage.getItem('garden_level')) || 1;
-    let balance = parseFloat(localStorage.getItem('garden_balance')) || 0;
-    let nextWaterTime = parseInt(localStorage.getItem('next_water_time')) || 0;
+    // Завантаження збережених даних
+    let level = parseInt(localStorage.getItem('g_lvl')) || 1;
+    let balance = parseInt(localStorage.getItem('g_bal')) || 0;
+    let nextTime = parseInt(localStorage.getItem('g_time')) || 0;
 
     const img = document.getElementById('flower-img');
     const btn = document.getElementById('water-btn');
-    const timerText = document.getElementById('timer');
-    const balanceText = document.getElementById('balance-display');
+    const balDisp = document.getElementById('balance-display');
+    const timerDisp = document.getElementById('timer');
 
-    // Шляхи до твоїх картинок (перевір, щоб назви файлів були правильні)
+    // Назви твоїх файлів у папці img
     const images = [
-        "img/stage_1_cat.png",
+        "img/stage_1_cat.png", 
         "img/stage_2_cat.png", 
-        "img/stage_3_cat.png",
-        "img/stage_4_cat.png",
-        "img/stage_5_cat.png",
+        "img/stage_3_cat.png", 
+        "img/stage_4_cat.png", 
+        "img/stage_5_cat.png", 
         "img/stage_6_cat.png"
     ];
 
     function updateUI() {
-        if(images[level-1]) img.src = images[level-1];
-        balanceText.innerText = (balance / 100).toFixed(2);
-    }
-
-    function checkTimer() {
+        balDisp.innerText = balance;
+        if(images[level-1]) {
+            img.src = images[level-1];
+        }
+        
         const now = Date.now();
-        if (now < nextWaterTime) {
+        if (now < nextTime) {
             btn.disabled = true;
-            startCountdown();
+            runTimer();
         } else {
             btn.disabled = false;
+            timerDisp.innerText = "";
         }
     }
 
-    function startCountdown() {
-        const interval = setInterval(() => {
-            const remain = Math.round((nextWaterTime - Date.now()) / 1000);
-            if (remain <= 0) {
-                clearInterval(interval);
+    function runTimer() {
+        const itv = setInterval(() => {
+            const rem = Math.round((nextTime - Date.now()) / 1000);
+            if (rem <= 0) {
+                clearInterval(itv);
                 btn.disabled = false;
-                timerText.innerText = "";
+                timerDisp.innerText = "";
             } else {
-                let m = Math.floor(remain / 60);
-                let s = remain % 60;
-                timerText.innerText = `До поливу: ${m}:${s < 10 ? '0' : ''}${s}`;
+                let m = Math.floor(rem / 60);
+                let s = rem % 60;
+                timerDisp.innerText = `Чекай: ${m}:${s < 10 ? '0' : ''}${s}`;
             }
         }, 1000);
     }
 
     btn.onclick = async () => {
         if (window.Adsgram) {
-            const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
+            const ad = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
             try {
-                const result = await AdController.show();
-                if (result.done) { 
-                    processGrowth(); 
+                const res = await ad.show();
+                if (res.done) { 
+                    doAction(); 
                 }
             } catch (e) {
-                // Якщо реклама не вантажиться, даємо поливати без неї (щоб кнопка працювала!)
-                processGrowth();
+                // Якщо реклама не спрацювала, все одно поливаємо (для тесту)
+                doAction();
             }
         } else {
-            processGrowth();
+            doAction();
         }
     };
 
-    function processGrowth() {
+    function doAction() {
         balance += 10;
         if (level < 6) {
             level++;
-            nextWaterTime = Date.now() + 30000; // ТИМЧАСОВО 30 СЕКУНД для тесту!
+            // Поставив 1 хвилину очікування для тесту, щоб ти бачила прогрес
+            nextTime = Date.now() + 60000; 
         }
-        localStorage.setItem('garden_level', level);
-        localStorage.setItem('garden_balance', balance);
-        localStorage.setItem('next_water_time', nextWaterTime);
+        localStorage.setItem('g_lvl', level);
+        localStorage.setItem('g_bal', balance);
+        localStorage.setItem('g_time', nextTime);
         updateUI();
-        checkTimer();
     }
 
+    // Запуск початкового стану
     updateUI();
-    checkTimer();
 </script>
 </body>
 </html>
