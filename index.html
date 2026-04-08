@@ -9,9 +9,8 @@
         body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f2faf2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .app-container { position: relative; width: 100%; height: 100%; }
         
-        #plant-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1; transition: opacity 0.5s ease-in-out; }
+        #plant-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1; }
         
-        /* Панель з балами "Rose" зверху */
         .score-panel {
             position: absolute;
             top: 20px;
@@ -19,9 +18,9 @@
             background: rgba(255, 255, 255, 0.9);
             padding: 10px 25px;
             border-radius: 20px;
-            font-weight: bold;
+            font-weight: 700;
             font-size: 18px;
-            color: #2e7d32; /* Колір троянди */
+            color: #2e7d32; /* Твій попередній колір */
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             z-index: 10;
             display: flex;
@@ -60,12 +59,7 @@
         .btn:disabled {
             background-color: #9e9e9e;
             transform: scale(0.98);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             cursor: not-allowed;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
         }
 
         #timer {
@@ -75,16 +69,16 @@
             padding: 8px 15px;
             border-radius: 12px;
             font-weight: 500;
-            display: none; /* Схований поки немає таймера */
+            display: none;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <img id="plant-img" src="stage_1_cat.png" alt="Rose garden stage 1">
+        <img id="plant-img" src="stage_1_cat.png" alt="Garden">
         
-        <div class="score-panel">🌸 Rose: <span id="points">0</span>/50</div>
+        <div id="score-container" class="score-panel">🌸 Rose: <span id="points">0</span>/50</div>
 
         <div class="button-panel">
             <div id="timer">Полив через: 03:00</div>
@@ -97,59 +91,47 @@
         tg.expand();
         tg.ready();
 
-        // ІНІЦІАЛІЗАЦІЯ ДАНИХ (Зберігання прогресу)
         let points = parseInt(localStorage.getItem('rose_points')) || 0;
         let currentStage = parseInt(localStorage.getItem('garden_stage')) || 1;
-        const cooldownTime = 180; // 3 хвилини у секундах
+        const cooldownTime = 180;
 
-        // Оновлюємо інтерфейс при завантаженні
         updateUI();
 
         function updateUI() {
-            document.getElementById('points').innerText = points;
             const plantImg = document.getElementById('plant-img');
+            const scoreContainer = document.getElementById('score-container');
             
-            // Завантажуємо правильну картинку на основі стадії
             if (currentStage >= 2) {
-                plantImg.src = 'stage_2_cat.jpg';
-                plantImg.alt = "Rose garden stage 2";
-                // Додаткова перевірка, щоб лічильник не перестрибував
-                if (points < 50) {
-                    points = 50; 
-                    document.getElementById('points').innerText = points;
-                }
+                plantImg.src = 'stage_2_cat.png';
+                // Оновлюємо текст цілі на 150 і прибираємо пробіл
+                scoreContainer.innerHTML = `🌸 Rose: <span id="points">${points}</span>/150`;
             } else {
                 plantImg.src = 'stage_1_cat.png';
-                plantImg.alt = "Rose garden stage 1";
+                scoreContainer.innerHTML = `🌸 Rose: <span id="points">${points}</span>/50`;
             }
         }
 
         function startWatering() {
-            // Блокуємо кнопку
             const btn = document.getElementById('water-btn');
             const timerDisplay = document.getElementById('timer');
             btn.disabled = true;
             timerDisplay.style.display = 'block';
 
-            // ЛОГІКА РЕКЛАМИ: Тут буде виклик Adsgram
-            // tg.showAlert("Запускається реклама...");
-            
-            // ЛОГІКА ПОЛИВУ (після реклами)
+            // Нарахування балів
             points += 10;
-            localStorage.setItem('rose_points', points); // Зберігаємо бали
 
-            // Перевірка на досягнення нової стадії
-            if (points >= 50 && currentStage < 2) {
+            // Логіка переходу та обнулення
+            if (currentStage === 1 && points >= 50) {
                 currentStage = 2;
-                localStorage.setItem('garden_stage', currentStage); // Зберігаємо стадію
-                tg.showAlert("Вітаємо! 🎉 Твій росток підріс до наступної стадії!");
+                points = 0; // Скидаємо до 0 для нової стадії
+                localStorage.setItem('garden_stage', currentStage);
+                tg.showAlert("🎉 Вітаємо! Твій росток розцвів! Тепер збирай 150 Rose.");
             }
 
-            updateUI(); // Оновлюємо картинку та лічильник
+            localStorage.setItem('rose_points', points);
+            updateUI();
 
-            // ТАЙМЕР ЗВОРОТНОГО ВІДЛІКУ
             let timeLeft = cooldownTime;
-            
             const interval = setInterval(() => {
                 timeLeft--;
                 let mins = Math.floor(timeLeft / 60);
@@ -160,29 +142,9 @@
                     clearInterval(interval);
                     btn.disabled = false;
                     timerDisplay.style.display = 'none';
-                    localStorage.setItem('rose_cooldown_end', '0'); // Скидаємо таймер
-                } else {
-                    // Зберігаємо час закінчення таймера (на випадок перезавантаження)
-                    localStorage.setItem('rose_cooldown_end', (Date.now() + timeLeft * 1000).toString());
                 }
             }, 1000);
         }
-
-        // Перевірка таймера при завантаженні (якщо користувач перезавантажив додаток)
-        function checkCooldown() {
-            const cooldownEndStr = localStorage.getItem('rose_cooldown_end');
-            if (cooldownEndStr && cooldownEndStr !== '0') {
-                const cooldownEnd = parseInt(cooldownEndStr);
-                const timeLeft = Math.floor((cooldownEnd - Date.now()) / 1000);
-                
-                if (timeLeft > 0) {
-                    // Користувач ще має чекати. Перезапускаємо таймер
-                    timeLeft;
-                }
-            }
-        }
-        
-        // checkCooldown(); // Активуйте це, щоб таймер зберігався після перезавантаження
     </script>
 </body>
-    </html>
+</html>
