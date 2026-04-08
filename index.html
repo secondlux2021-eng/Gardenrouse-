@@ -8,9 +8,7 @@
     <style>
         body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f2faf2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .app-container { position: relative; width: 100%; height: 100%; }
-        
         #plant-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1; }
-        
         .score-panel {
             position: absolute;
             top: 20px;
@@ -20,14 +18,10 @@
             border-radius: 20px;
             font-weight: 700;
             font-size: 18px;
-            color: #2e7d32; /* Твій попередній колір */
+            color: #2e7d32;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
-
         .button-panel {
             position: absolute;
             bottom: 30px;
@@ -38,7 +32,6 @@
             align-items: flex-end;
             gap: 12px;
         }
-
         .btn {
             background-color: #4CAF50;
             color: white;
@@ -52,16 +45,9 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.2s ease;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
         }
-
-        .btn:disabled {
-            background-color: #9e9e9e;
-            transform: scale(0.98);
-            cursor: not-allowed;
-        }
-
+        .btn:disabled { background-color: #9e9e9e; transform: scale(0.98); }
         #timer {
             font-size: 15px;
             color: #333;
@@ -77,8 +63,7 @@
 <body>
     <div class="app-container">
         <img id="plant-img" src="stage_1_cat.png" alt="Garden">
-        
-        <div id="score-container" class="score-panel">🌸 Rose: <span id="points">0</span>/50</div>
+        <div id="score-container" class="score-panel"></div>
 
         <div class="button-panel">
             <div id="timer">Полив через: 03:00</div>
@@ -95,6 +80,12 @@
         let currentStage = parseInt(localStorage.getItem('garden_stage')) || 1;
         const cooldownTime = 180;
 
+        // ПРИМУСОВЕ СКИНУТТЯ ДЛЯ ТЕБЕ (якщо бали залишилися від старої версії)
+        if (currentStage === 2 && points > 50) {
+            points = 0;
+            localStorage.setItem('rose_points', 0);
+        }
+
         updateUI();
 
         function updateUI() {
@@ -102,12 +93,12 @@
             const scoreContainer = document.getElementById('score-container');
             
             if (currentStage >= 2) {
-                plantImg.src = 'stage_2_cat.jpg';
-                // Оновлюємо текст цілі на 150 і прибираємо пробіл
-                scoreContainer.innerHTML = `🌸 Rose: <span id="points">${points}</span>/150`;
+                plantImg.src = 'stage_2_cat.png';
+                // Пишемо все в один рядок без пробілів навколо косої риски
+                scoreContainer.innerHTML = `🌸 Rose:<span id="points">${points}</span>/150`;
             } else {
                 plantImg.src = 'stage_1_cat.png';
-                scoreContainer.innerHTML = `🌸 Rose: <span id="points">${points}</span>/50`;
+                scoreContainer.innerHTML = `🌸 Rose:<span id="points">${points}</span>/50`;
             }
         }
 
@@ -117,13 +108,11 @@
             btn.disabled = true;
             timerDisplay.style.display = 'block';
 
-            // Нарахування балів
             points += 10;
 
-            // Логіка переходу та обнулення
             if (currentStage === 1 && points >= 50) {
                 currentStage = 2;
-                points = 0; // Скидаємо до 0 для нової стадії
+                points = 0; 
                 localStorage.setItem('garden_stage', currentStage);
                 tg.showAlert("🎉 Вітаємо! Твій росток розцвів! Тепер збирай 150 Rose.");
             }
@@ -137,7 +126,6 @@
                 let mins = Math.floor(timeLeft / 60);
                 let secs = timeLeft % 60;
                 timerDisplay.innerText = `Полив через: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
-
                 if (timeLeft <= 0) {
                     clearInterval(interval);
                     btn.disabled = false;
