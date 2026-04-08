@@ -6,63 +6,83 @@
     <title>Gardenrouse Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f2faf2; font-family: sans-serif; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f2faf2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .app-container { position: relative; width: 100%; height: 100%; }
-        #plant-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         
-        /* Панель з балами зверху */
+        #plant-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1; transition: opacity 0.5s ease-in-out; }
+        
+        /* Панель з балами "Rose" зверху */
         .score-panel {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 25px;
             border-radius: 20px;
-            font-weight: bold;
-            color: #2e7d32;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-weight: 700;
+            font-size: 18px;
+            color: #d32f2f; /* Колір троянди */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .button-panel {
             position: absolute;
             bottom: 30px;
             right: 20px;
+            z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 10px;
+            gap: 12px;
         }
 
         .btn {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 15px 30px;
-            font-size: 16px;
+            padding: 18px 40px;
+            font-size: 18px;
             font-weight: 600;
-            border-radius: 25px;
+            border-radius: 30px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
         }
 
         .btn:disabled {
             background-color: #9e9e9e;
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             cursor: not-allowed;
         }
 
+        .btn:active {
+            transform: scale(0.95);
+        }
+
         #timer {
-            font-size: 14px;
-            color: white;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 10px;
+            font-size: 15px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 12px;
+            font-weight: 500;
             display: none; /* Схований поки немає таймера */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <img id="plant-img" src="stage_1_cat.png">
+        <img id="plant-img" src="stage_1_cat.png" alt="Rose garden stage 1">
         
         <div class="score-panel">🌸 Rose: <span id="points">0</span>/50</div>
 
@@ -75,27 +95,59 @@
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.ready();
 
-        let points = 0;
+        // ІНІЦІАЛІЗАЦІЯ ДАНИХ (Зберігання прогресу)
+        let points = parseInt(localStorage.getItem('rose_points')) || 0;
+        let currentStage = parseInt(localStorage.getItem('garden_stage')) || 1;
         const cooldownTime = 180; // 3 хвилини у секундах
 
-        function startWatering() {
-            // Тут пізніше буде виклик реклами. Поки що просто логіка:
-            points += 10;
+        // Оновлюємо інтерфейс при завантаженні
+        updateUI();
+
+        function updateUI() {
             document.getElementById('points').innerText = points;
-
-            if (points >= 50) {
-                // Перехід на стадію 2
-                document.getElementById('plant-img').src = 'stage_2_cat.png';
-                alert("Вітаємо! Твій росток підріс!");
+            const plantImg = document.getElementById('plant-img');
+            
+            // Завантажуємо правильну картинку на основі стадії
+            if (currentStage >= 2) {
+                plantImg.src = 'stage_2_cat.png';
+                plantImg.alt = "Rose garden stage 2";
+                // Додаткова перевірка, щоб лічильник не перестрибував
+                if (points < 50) {
+                    points = 50; 
+                    document.getElementById('points').innerText = points;
+                }
+            } else {
+                plantImg.src = 'stage_1_cat.png';
+                plantImg.alt = "Rose garden stage 1";
             }
+        }
 
+        function startWatering() {
             // Блокуємо кнопку
             const btn = document.getElementById('water-btn');
             const timerDisplay = document.getElementById('timer');
             btn.disabled = true;
             timerDisplay.style.display = 'block';
 
+            // ЛОГІКА РЕКЛАМИ: Тут буде виклик Adsgram
+            // tg.showAlert("Запускається реклама...");
+            
+            // ЛОГІКА ПОЛИВУ (після реклами)
+            points += 10;
+            localStorage.setItem('rose_points', points); // Зберігаємо бали
+
+            // Перевірка на досягнення нової стадії
+            if (points >= 50 && currentStage < 2) {
+                currentStage = 2;
+                localStorage.setItem('garden_stage', currentStage); // Зберігаємо стадію
+                tg.showAlert("Вітаємо! 🎉 Твій росток підріс до наступної стадії!");
+            }
+
+            updateUI(); // Оновлюємо картинку та лічильник
+
+            // ТАЙМЕР ЗВОРОТНОГО ВІДЛІКУ
             let timeLeft = cooldownTime;
             
             const interval = setInterval(() => {
@@ -108,9 +160,29 @@
                     clearInterval(interval);
                     btn.disabled = false;
                     timerDisplay.style.display = 'none';
+                    localStorage.setItem('rose_cooldown_end', '0'); // Скидаємо таймер
+                } else {
+                    // Зберігаємо час закінчення таймера (на випадок перезавантаження)
+                    localStorage.setItem('rose_cooldown_end', (Date.now() + timeLeft * 1000).toString());
                 }
             }, 1000);
         }
+
+        // Перевірка таймера при завантаженні (якщо користувач перезавантажив додаток)
+        function checkCooldown() {
+            const cooldownEndStr = localStorage.getItem('rose_cooldown_end');
+            if (cooldownEndStr && cooldownEndStr !== '0') {
+                const cooldownEnd = parseInt(cooldownEndStr);
+                const timeLeft = Math.floor((cooldownEnd - Date.now()) / 1000);
+                
+                if (timeLeft > 0) {
+                    // Користувач ще має чекати. Перезапускаємо таймер
+                    timeLeft;
+                }
+            }
+        }
+        
+        // checkCooldown(); // Активуйте це, щоб таймер зберігався після перезавантаження
     </script>
 </body>
-</html>
+    </html>
