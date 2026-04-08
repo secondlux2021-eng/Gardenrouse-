@@ -1,65 +1,131 @@
 <!DOCTYPE html>
-<html>
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rose Garden</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Gardenrouse Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
     <style>
-        body {
-            background-color: #f0f7f0; /* Світло-зелений фон */
-            font-family: sans-serif;
-            text-align: center;
-            color: #2d4a2d;
-        }
-        .container { padding: 20px; }
-        
-        #plant-img {
-            width: 250px;
-            height: 250px;
-            border-radius: 20px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        /* Оновлюємо стилі для ефекту повного екрана */
+        :root {
+            --main-bg-color: #f2faf2; /* Твій світло-зелений колір */
+            --button-color: #4CAF50;
+            --header-text-color: #1a331a; /* Темно-зелений для тексту */
         }
 
-        /* Твоя ЗЕЛЕНА кнопка */
-        .btn-water {
-            background-color: #4CAF50; /* Насичений зелений */
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Щоб сторінка не прокручувалася */
+            background-color: var(--main-bg-color);
+            color: var(--header-text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* КОНТЕЙНЕР ДЛЯ ЗОБРАЖЕННЯ НА ВЕСЬ ЕКРАН */
+        .app-container {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Сама картинка: ми робимо її фоном */
+        #plant-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Це ключова магія! Зберігає пропорції та заповнює екран */
+            display: block;
+        }
+
+        /* ВЕРХНЯ ПАНЕЛЬ З ЗАГОЛОВКОМ (Поверх картинки) */
+        .header-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 120px; /* Трохи більша висота */
+            background: linear-gradient(180deg, rgba(242, 250, 242, 0.95) 0%, rgba(242, 250, 242, 0) 100%); /* Красивий градієнт: від напівпрозорого до прозорого */
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end; /* Текст знизу панелі */
+            padding-bottom: 20px;
+        }
+
+        .header-panel h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--header-text-color);
+        }
+
+        /* НИЖНЯ ПАНЕЛЬ З КНОПКОЮ (Поверх картинки) */
+        .button-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(0deg, rgba(242, 250, 242, 0.95) 0%, rgba(242, 250, 242, 0) 100%); /* Градієнт знизу */
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Кнопка по центру */
+            padding-bottom: 20px; /* Трохи відступаємо від нижнього краю */
+        }
+
+        /* Сама кнопка (ми трохи збільшили її для кращого вигляду) */
+        .btn {
+            background-color: var(--button-color);
             color: white;
             border: none;
-            padding: 15px 30px;
+            padding: 18px 40px;
             font-size: 18px;
-            border-radius: 50px;
+            font-weight: 600;
+            border-radius: 30px; /* Більше закруглення */
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); /* Красива тінь */
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            -webkit-tap-highlight-color: rgba(0,0,0,0); /* Прибираємо стандартне виділення при натисканні */
         }
-        
-        .btn-water:active {
-            transform: scale(0.95);
-            background-color: #45a049;
+
+        .btn:active {
+            transform: translateY(2px); /* Ефект натискання */
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
         }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 id="status-text">Мій росток</h1>
-        <img id="plant-img" src="stage_1_cat.png" alt="Rose">
-        <br><br>
-        <button class="btn-water" onclick="waterPlant()">💧 Полити за рекламу</button>
+    <div class="app-container">
+        <img id="plant-img" src="stage_1_cat.png" alt="Rose garden">
+
+        <div class="header-panel">
+            <h1>Мій росток</h1>
+        </div>
+
+        <div class="button-panel">
+            <button class="btn">💧 Полити за рекламу</button>
+        </div>
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand(); // Розгортає додаток на весь екран
-
-        function waterPlant() {
-            // Тут ми потім підключимо Adsgram
-            alert("Дивимось рекламу...");
-            
-            // Після реклами відправляємо дані боту
-            tg.sendData("watered"); 
-        }
+        // Ініціалізація Telegram Web App JS
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Розширюємо додаток на весь екран Telegram
     </script>
 </body>
 </html>
