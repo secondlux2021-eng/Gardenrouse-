@@ -277,25 +277,26 @@
             }
 
             tg.showPopup({
-                title: 'Вивід USDT',
-                message: `Ваш баланс: ${usdtBalance.toFixed(2)} USDT. Бажаєте замовити виплату чеком CryptoBot?`,
-                buttons: [
-                    {id: 'withdraw', type: 'default', text: 'Замовити виплату'},
-                    {id: 'cancel', type: 'destructive', text: 'Скасувати'}
-                ]
-            }, function(buttonId) {
-                if (buttonId === 'withdraw') {
-                    tg.showAlert("Запит надіслано! Напишіть адміністратору ваш ID для отримання USDT.");
-                }
-            });
+        title: 'Вивід USDT',
+        message: 'Ваш баланс: ' + usdtBalance.toFixed(2) + ' USDT. Бажаєте замовити виплату?',
+        buttons: [
+            {id: 'withdraw', type: 'default', text: 'Замовити виплату'},
+            {id: 'cancel', type: 'destructive', text: 'Скасувати'}
+        ]
+    }, function(buttonId) {
+        if (buttonId === 'withdraw') {
+            tg.showAlert("Запит надіслано! Напишіть адміністратору.");
         }
-               function showRules() {
-            tg.showPopup({
-                title: 'Правила Gardenrouse',
-                message: '1. Накопичуйте бали, поливаючи квітку і піднімайте свій рівень.\n2. Після досягнення 5 рівня створіть букет, який можна обміняти на 0.06 USDT.\n3. Виплата проводиться вручну адміністратором.\n4. Будь-які спроби зламу чи накрутки — бан. Твінки і мультиаккаути - бан',
-                buttons: [{type: 'ok', text: 'Зрозуміло'}]
-            })
-        }
+    });
+}
+
+function showRules() {
+    tg.showPopup({
+        title: 'Правила Gardenrouse',
+        message: '1. Накопичуйте бали, поливаючи квітку.\n2. 1000 Rose = 0.06 USDT.\n3. Виплата проводиться вручну.',
+        buttons: [{type: 'ok', text: 'Зрозуміло'}]
+    });
+}
     
     </script>
 </body>
