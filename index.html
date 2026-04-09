@@ -112,6 +112,24 @@
             border: 1px solid #2e7d32;
             font-size: 25px;
         }
+
+        .bonus-icon {
+            position: absolute;
+            top: 145px; /* На 55 пікселів нижче за кнопку інфо */
+            left: 20px;
+            width: 45px;
+            height: 45px;
+            font-size: 22px; /* Розмір емодзі всередині */
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10000;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.25);
+            border: 2px solid #fbc02d; /* Золотиста рамка для бонусу */
+        }
     </style>
 </head>
 <body>
@@ -121,6 +139,8 @@
         </div>
 
         <div class="rules-icon" onclick="showRules()">ⓘ</div>
+
+        <div class="bonus-icon" onclick="claimBonus()">🎁</div>
         
         <div id="score-container" class="score-panel"></div>
 
@@ -297,7 +317,25 @@ function showRules() {
         buttons: [{type: 'ok', text: 'Зрозуміло'}]
     });
 }
-    
+
+function claimBonus() {
+    const lastBonus = localStorage.getItem('lastBonusTime');
+    const now = Date.now();
+    const dayInMs = 24 * 60 * 60 * 1000;
+
+    if (lastBonus && (now - lastBonus < dayInMs)) {
+        const timeLeft = dayInMs - (now - lastBonus);
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        tg.showAlert("Бонус уже отримано! Повертайтеся через " + hours + " год. " + minutes + " хв.");
+        return;
+    }
+
+    score += 100; // Нараховуємо 100 Rose
+    updateDisplay(); // Оновлюємо цифри на екрані
+    localStorage.setItem('lastBonusTime', now);
+    tg.showAlert("Вітаємо! Ви отримали щоденний бонус: 100 🌹");
+}
     </script>
 </body>
     </html>
