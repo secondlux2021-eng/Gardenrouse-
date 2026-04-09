@@ -49,9 +49,7 @@
             align-items: center;
             gap: 10px;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
-            transition: transform 0.1s;
         }
-        .btn:active { transform: scale(0.95); }
         .btn:disabled { background-color: #9e9e9e; transform: scale(1); cursor: not-allowed; }
 
         #timer {
@@ -97,8 +95,9 @@
         let lastCompletionDate = localStorage.getItem('last_completion_date') || "";
         let timerInterval = null;
 
+        // Початкове оновлення екрану та перевірка таймерів
         updateUI();
-        checkGlobalCooldown();
+        checkCooldown();
 
         function updateUI() {
             const plantImg = document.getElementById('plant-img');
@@ -118,7 +117,8 @@
         }
 
         function handleWatering() {
-            tg.HapticFeedback.impactOccurred('medium');
+            // Вібровідгук Telegram
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
             const today = new Date().toLocaleDateString();
             if (currentStage === 6 && lastCompletionDate === today) {
@@ -127,82 +127,11 @@
             }
 
             points += 10;
+            let nextUnlockDelay = 180; // Стандартні 3 хвилини
 
+            // Перевірка переходу на новий рівень
             if (points >= levels[currentStage].goal && !levels[currentStage].isFinal) {
                 const breakTime = levels[currentStage].nextBreak;
-                
-                if (breakTime > 0) {
-                    const unlockTime = Date.now() + (breakTime * 1000);
-                    localStorage.setItem('unlock_time', unlockTime);
-                }
+                if (breakTime > 0) nextUnlockDelay = breakTime;
 
                 currentStage++;
-                points = 0;
-
-                if (currentStage === 6) {
-                    lastCompletionDate = new Date().toLocaleDateString();
-                    localStorage.setItem('last_completion_date', lastCompletionDate);
-                    tg.showAlert("✨ Неймовірно! Ти виростила прекрасний букет!");
-                } else {
-                    tg.showAlert(`Рівень ${currentStage-1} пройдено! Потрібен час для росту...`);
-                }
-                
-                localStorage.setItem('garden_stage', currentStage);
-            }
-
-            localStorage.setItem('rose_points', points);
-            updateUI();
-
-            // Якщо після переходу на новий рівень активувався великий кулдаун
-            if (localStorage.getItem('unlock_time')) {
-                checkGlobalCooldown();
-            } else {
-                startTimer(180); // Звичайна перерва 3 хв
-            }
-        }
-
-        function startTimer(seconds, isGlobal = false) {
-            const btn = document.getElementById('water-btn');
-            const timerDisplay = document.getElementById('timer');
-            
-            clearInterval(timerInterval);
-            btn.disabled = true;
-            timerDisplay.style.display = 'block';
-
-            let timeLeft = seconds;
-            
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                
-                if (isGlobal) {
-                    let h = Math.floor(timeLeft / 3600);
-                    let m = Math.floor((timeLeft % 3600) / 60);
-                    let s = timeLeft % 60;
-                    timerDisplay.innerText = `Ріст триває: ${h}г ${m}хв ${s}с`;
-                } else {
-                    let m = Math.floor(timeLeft / 60);
-                    let s = timeLeft % 60;
-                    timerDisplay.innerText = `Наступний полив: ${m}:${s < 10 ? '0' : ''}${s}`;
-                }
-
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    timerDisplay.style.display = 'none';
-                    localStorage.removeItem('unlock_time');
-                    btn.disabled = false;
-                }
-            }, 1000);
-        }
-
-        function checkGlobalCooldown() {
-            const unlockTime = parseInt(localStorage.getItem('unlock_time')) || 0;
-            const now = Date.now();
-
-            if (unlockTime > now) {
-                let timeLeft = Math.floor((unlockTime - now) / 1000);
-                startTimer(timeLeft, true);
-            }
-        }
-    </script>
-</body>
-</html>
