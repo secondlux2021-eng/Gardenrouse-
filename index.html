@@ -49,9 +49,10 @@
             align-items: center;
             gap: 10px;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
+            transition: transform 0.1s;
         }
-
-        .btn:disabled { background-color: #9e9e9e; transform: scale(0.98); cursor: not-allowed; }
+        .btn:active { transform: scale(0.95); }
+        .btn:disabled { background-color: #9e9e9e; transform: scale(1); cursor: not-allowed; }
 
         #timer {
             font-size: 14px;
@@ -73,22 +74,20 @@
 
         <div class="button-panel">
             <div id="timer"></div>
-            <button id="water-btn" class="btn" onclick="startWatering()">💧 Полити</button>
+            <button id="water-btn" class="btn" onclick="handleWatering()">💧 Полити</button>
         </div>
     </div>
 
     <script>
-        const ADSGRAM_BLOCK_ID = "26373"
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.ready();
 
-        // КОНФІГУРАЦІЯ РІВНІВ
         const levels = {
             1: { goal: 50, nextBreak: 0 },
-            2: { goal: 150, nextBreak: 3600 }, // 1 година після Level 2
-            3: { goal: 300, nextBreak: 3600 }, // 1 година після Level 3
-            4: { goal: 500, nextBreak: 14400 }, // 4 години після Level 4
+            2: { goal: 150, nextBreak: 3600 }, 
+            3: { goal: 300, nextBreak: 3600 }, 
+            4: { goal: 500, nextBreak: 14400 }, 
             5: { goal: 1000, nextBreak: 0 },
             6: { goal: 0, isFinal: true }
         };
@@ -96,6 +95,7 @@
         let points = parseInt(localStorage.getItem('rose_points')) || 0;
         let currentStage = parseInt(localStorage.getItem('garden_stage')) || 1;
         let lastCompletionDate = localStorage.getItem('last_completion_date') || "";
+        let timerInterval = null;
 
         updateUI();
         checkGlobalCooldown();
@@ -112,31 +112,26 @@
                 btn.innerText = "Чекаємо завтра";
                 btn.disabled = true;
             } else {
-                scoreContainer.innerHTML = `🌸 Rose:<span id="points">${points}</span>/${levels[currentStage].goal}`;
+                scoreContainer.innerHTML = `🌸 Rose: ${points}/${levels[currentStage].goal}`;
                 btn.innerText = "💧 Полити";
             }
         }
 
-        function startWatering() {
-            const btn = document.getElementById('water-btn');
-            const timerDisplay = document.getElementById('timer');
+        function handleWatering() {
+            tg.HapticFeedback.impactOccurred('medium');
 
-            // 1. Перевірка на новий день (якщо вже зібрали букет)
             const today = new Date().toLocaleDateString();
             if (currentStage === 6 && lastCompletionDate === today) {
                 tg.showAlert("Сьогодні врожай вже зібрано! Приходь завтра 🌱");
                 return;
             }
 
-            // Нараховуємо бали
             points += 10;
 
-            // Логіка переходу
             if (points >= levels[currentStage].goal && !levels[currentStage].isFinal) {
                 const breakTime = levels[currentStage].nextBreak;
                 
                 if (breakTime > 0) {
-                    // Встановлюємо велику перерву
                     const unlockTime = Date.now() + (breakTime * 1000);
                     localStorage.setItem('unlock_time', unlockTime);
                 }
@@ -147,7 +142,7 @@
                 if (currentStage === 6) {
                     lastCompletionDate = new Date().toLocaleDateString();
                     localStorage.setItem('last_completion_date', lastCompletionDate);
-                    tg.showAlert("✨ Неймовірно! Ти виростила прекрасний букет! Обмін на USDT скоро...");
+                    tg.showAlert("✨ Неймовірно! Ти виростила прекрасний букет!");
                 } else {
                     tg.showAlert(`Рівень ${currentStage-1} пройдено! Потрібен час для росту...`);
                 }
@@ -158,59 +153,54 @@
             localStorage.setItem('rose_points', points);
             updateUI();
 
-            // Звичайна перерва між поливами (3 хв)
-            startTimer(180); 
+            // Якщо після переходу на новий рівень активувався великий кулдаун
+            if (localStorage.getItem('unlock_time')) {
+                checkGlobalCooldown();
+            } else {
+                startTimer(180); // Звичайна перерва 3 хв
+            }
         }
 
-        function startTimer(seconds) {
+        function startTimer(seconds, isGlobal = false) {
             const btn = document.getElementById('water-btn');
             const timerDisplay = document.getElementById('timer');
             
+            clearInterval(timerInterval);
             btn.disabled = true;
             timerDisplay.style.display = 'block';
 
             let timeLeft = seconds;
-            const interval = setInterval(() => {
+            
+            timerInterval = setInterval(() => {
                 timeLeft--;
-                let m = Math.floor(timeLeft / 60);
-                let s = timeLeft % 60;
-                timerDisplay.innerText = `Наступний полив: ${m}:${s < 10 ? '0' : ''}${s}`;
+                
+                if (isGlobal) {
+                    let h = Math.floor(timeLeft / 3600);
+                    let m = Math.floor((timeLeft % 3600) / 60);
+                    let s = timeLeft % 60;
+                    timerDisplay.innerText = `Ріст триває: ${h}г ${m}хв ${s}с`;
+                } else {
+                    let m = Math.floor(timeLeft / 60);
+                    let s = timeLeft % 60;
+                    timerDisplay.innerText = `Наступний полив: ${m}:${s < 10 ? '0' : ''}${s}`;
+                }
 
                 if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    checkGlobalCooldown(); // Перевіряємо, чи не діє ще велика перерва
+                    clearInterval(timerInterval);
+                    timerDisplay.style.display = 'none';
+                    localStorage.removeItem('unlock_time');
+                    btn.disabled = false;
                 }
             }, 1000);
         }
 
         function checkGlobalCooldown() {
-            const btn = document.getElementById('water-btn');
-            const timerDisplay = document.getElementById('timer');
             const unlockTime = parseInt(localStorage.getItem('unlock_time')) || 0;
             const now = Date.now();
 
             if (unlockTime > now) {
-                btn.disabled = true;
-                timerDisplay.style.display = 'block';
-                
                 let timeLeft = Math.floor((unlockTime - now) / 1000);
-                const globalInterval = setInterval(() => {
-                    timeLeft--;
-                    let h = Math.floor(timeLeft / 3600);
-                    let m = Math.floor((timeLeft % 3600) / 60);
-                    let s = timeLeft % 60;
-                    timerDisplay.innerText = `Ріст триває: ${h}г ${m}хв ${s}с`;
-
-                    if (timeLeft <= 0) {
-                        clearInterval(globalInterval);
-                        btn.disabled = false;
-                        timerDisplay.style.display = 'none';
-                        localStorage.removeItem('unlock_time');
-                    }
-                }, 1000);
-            } else {
-                btn.disabled = false;
-                timerDisplay.style.display = 'none';
+                startTimer(timeLeft, true);
             }
         }
     </script>
