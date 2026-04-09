@@ -319,37 +319,29 @@ function showRules() {
 }
 
 function claimBonus() {
-    // Визначаємо об'єкт Telegram, щоб не було помилок
     const webApp = window.Telegram.WebApp;
-
     try {
         const lastBonus = localStorage.getItem('lastBonusTime');
         const now = Date.now();
         const dayInMs = 24 * 60 * 60 * 1000;
 
+        // Перевірка часу
         if (lastBonus && (now - parseInt(lastBonus) < dayInMs)) {
             const timeLeft = dayInMs - (now - parseInt(lastBonus));
             const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-            webApp.showAlert("Бонус уже отримано! Повертайся через " + hours + " год.");
+            webApp.showAlert("Бонус уже отримано! Повертайтеся через " + hours + " год.");
             return;
         }
 
-        // ПЕРЕВІРКА: якщо score не існує або він порожній, робимо його нулем
-        if (typeof score === 'undefined' || score === null) {
-            score = 0;
+        // ПЕРЕВІРКА: додаємо саме до points
+        if (typeof points !== 'undefined') {
+            points += 10;
+        } else {
+            // Якщо раптом points не глобальна, створюємо її
+            window.points = (window.points || 0) + 10;
         }
 
-        // Додаємо бонус
-        score += 10;
-
-        // Оновлюємо текст на екрані
-        // У Gardenrouse ми зазвичай шукаємо елемент з id="score"
-        const scoreElement = document.getElementById('score');
-        if (scoreElement) {
-            scoreElement.innerText = Math.floor(score);
-        }
-
-        // Викликаємо функцію оновлення, якщо вона є в твоєму коді
+        // Оновлюємо екран через твою функцію
         if (typeof updateDisplay === 'function') {
             updateDisplay();
         }
@@ -358,7 +350,6 @@ function claimBonus() {
         webApp.showAlert("Вітаємо! Ви отримали +10 🌹");
 
     } catch (e) {
-        // Якщо все одно буде помилка, ми побачимо її текст
         webApp.showAlert("Помилка бонусу: " + e.message);
     }
 }
