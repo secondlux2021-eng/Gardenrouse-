@@ -12,11 +12,29 @@
             -webkit-font-smoothing: antialiased; 
         }
         .app-container { position: relative; width: 100%; height: 100%; }
+        
         #plant-img { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             object-fit: cover; display: block; z-index: 1; 
         }
         
+        /* Панель USDT (Зліва) */
+        .balance-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 18px;
+            color: #f3ba2f; /* Золотистий колір для USDT */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        /* Панель Rose (Справа) */
         .score-panel {
             position: absolute;
             top: 20px;
@@ -77,12 +95,16 @@
 </head>
 <body>
     <div class="app-container">
-        <img id="plant-img" src="stage_1_cat.png">
+        <div class="balance-panel" onclick="requestWithdrawal()">
+            💰 <span id="usdt-balance">0.00</span> USDT
+        </div>
         <div id="score-container" class="score-panel"></div>
+
+        <img id="plant-img" src="stage_1_cat.png">
 
         <div class="button-panel">
             <div id="timer"></div>
-            <button id="water-btn" class="btn" onclick="handleWatering()">💧 Полити</button>
+            <button id="water-btn" class="btn">💧 Полити</button>
         </div>
     </div>
 
@@ -91,7 +113,6 @@
         tg.expand();
         tg.ready();
 
-        // КОНФІГУРАЦІЯ РІВНІВ
         const levels = {
             1: { goal: 50, nextBreak: 0 },
             2: { goal: 150, nextBreak: 3600 }, 
@@ -101,78 +122,89 @@
             6: { goal: 0, isFinal: true }
         };
 
+        // Завантаження даних
         let points = parseInt(localStorage.getItem('rose_points')) || 0;
         let currentStage = parseInt(localStorage.getItem('garden_stage')) || 1;
-        let lastCompletionDate = localStorage.getItem('last_completion_date') || "";
+        let usdtBalance = parseFloat(localStorage.getItem('usdt_balance')) || 0.00;
         let timerInterval = null;
 
-        // Ініціалізація інтерфейсу
+        // Початковий запуск
         updateUI();
         checkCooldown();
 
         function updateUI() {
             const plantImg = document.getElementById('plant-img');
             const scoreContainer = document.getElementById('score-container');
+            const usdtDisplay = document.getElementById('usdt-balance');
             const btn = document.getElementById('water-btn');
 
+            // Оновлення балансу USDT
+            usdtDisplay.innerText = usdtBalance.toFixed(2);
+            
+            // Зображення стадії
             plantImg.src = `stage_${currentStage}_cat.png`;
 
             if (levels[currentStage].isFinal) {
-                scoreContainer.innerHTML = `🌸 Букет зібрано!`;
-                btn.innerText = "Чекаємо завтра";
-                btn.disabled = true;
+                // Спеціальний вигляд для обміну
+                scoreContainer.innerHTML = `🌸 Букет готовий!`;
+                btn.innerText = "💰 Обміняти на USDT";
+                btn.style.backgroundColor = "#f3ba2f";
+                btn.onclick = exchangeRoseToUsdt;
             } else {
+                // Стандартний вигляд для гри
                 scoreContainer.innerHTML = `🌸 Rose: ${points}/${levels[currentStage].goal}`;
                 btn.innerText = "💧 Полити";
+                btn.style.backgroundColor = "#4CAF50";
+                btn.onclick = handleWatering;
             }
         }
 
         function handleWatering() {
-            // Вібровідгук для Telegram
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('medium');
-            }
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
-            // Перевірка на фінальну стадію (новий день)
-            const today = new Date().toLocaleDateString();
-            if (currentStage === 6 && lastCompletionDate === today) {
-                tg.showAlert("Сьогодні врожай вже зібрано! Приходь завтра 🌱");
-                return;
-            }
-
-            // Нарахування балів
             points += 10;
-            let nextUnlockDelay = 180; // Стандартна пауза 3 хв (180 сек)
+            let nextUnlockDelay = 180; // 3 хв
 
-            // Логіка переходу на новий рівень
-            if (!levels[currentStage].isFinal && points >= levels[currentStage].goal) {
+            if (points >= levels[currentStage].goal && !levels[currentStage].isFinal) {
                 const breakTime = levels[currentStage].nextBreak;
-                
-                if (breakTime > 0) {
-                    nextUnlockDelay = breakTime; 
-                }
+                if (breakTime > 0) nextUnlockDelay = breakTime;
 
                 currentStage++;
                 points = 0;
-
-                if (currentStage === 6) {
-                    lastCompletionDate = new Date().toLocaleDateString();
-                    localStorage.setItem('last_completion_date', lastCompletionDate);
-                    tg.showAlert("✨ Неймовірно! Ти виростила прекрасний букет!");
-                } else {
-                    tg.showAlert(`Рівень ${currentStage-1} пройдено! Троянда має підрости...`);
-                }
                 
-                localStorage.setItem('garden_stage', currentStage);
+                if (currentStage === 6) {
+                    tg.showAlert("✨ Вітаємо! Ти виростила букет! Тепер його можна обміняти.");
+                } else {
+                    tg.showAlert(`Рівень ${currentStage-1} пройдено! Потрібен час на ріст...`);
+                }
             }
 
-            // Зберігаємо прогрес та час наступного розблокування
+            // Збереження
             const unlockTime = Date.now() + (nextUnlockDelay * 1000);
             localStorage.setItem('unlock_time', unlockTime);
             localStorage.setItem('rose_points', points);
+            localStorage.setItem('garden_stage', currentStage);
             
             updateUI();
-            checkCooldown(); 
+            checkCooldown();
+        }
+
+        function exchangeRoseToUsdt() {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            
+            usdtBalance += 0.06;
+            currentStage = 1;
+            points = 0;
+
+            localStorage.setItem('usdt_balance', usdtBalance);
+            localStorage.setItem('garden_stage', currentStage);
+            localStorage.setItem('rose_points', points);
+            localStorage.removeItem('unlock_time');
+
+            tg.showAlert("✨ Обмін успішний! 0.06 USDT нараховано. Починаємо новий букет! 🌱");
+            
+            updateUI();
+            checkCooldown();
         }
 
         function checkCooldown() {
@@ -181,31 +213,27 @@
             const unlockTime = parseInt(localStorage.getItem('unlock_time')) || 0;
             const now = Date.now();
 
-            if (unlockTime > now) {
-                // Очищуємо попередній інтервал, щоб не було накладання
+            if (unlockTime > now && currentStage < 6) {
                 clearInterval(timerInterval);
                 btn.disabled = true;
                 timerDisplay.style.display = 'block';
 
                 timerInterval = setInterval(() => {
-                    const currentTime = Date.now();
-                    const timeLeft = Math.floor((unlockTime - currentTime) / 1000);
+                    const timeLeft = Math.floor((unlockTime - Date.now()) / 1000);
 
                     if (timeLeft <= 0) {
                         clearInterval(timerInterval);
                         timerDisplay.style.display = 'none';
                         btn.disabled = false;
                         localStorage.removeItem('unlock_time');
-                        updateUI();
                         return;
                     }
 
-                    // Гарне відображення часу
-                    if (timeLeft > 300) { 
+                    if (timeLeft > 300) {
                         let h = Math.floor(timeLeft / 3600);
                         let m = Math.floor((timeLeft % 3600) / 60);
                         let s = timeLeft % 60;
-                        timerDisplay.innerText = `Ріст триває: ${h}г ${m}хв ${s}с`;
+                        timerDisplay.innerText = `Ріст: ${h}г ${m}хв ${s}с`;
                     } else {
                         let m = Math.floor(timeLeft / 60);
                         let s = timeLeft % 60;
@@ -213,13 +241,30 @@
                     }
                 }, 1000);
             } else {
-                // Якщо час вийшов або кулдауну немає
-                if (!levels[currentStage].isFinal) {
-                    btn.disabled = false;
-                }
+                btn.disabled = false;
                 timerDisplay.style.display = 'none';
             }
         }
+
+        function requestWithdrawal() {
+            if (usdtBalance <= 0) {
+                tg.showAlert("У вас ще немає USDT для виводу.");
+                return;
+            }
+
+            tg.showPopup({
+                title: 'Вивід USDT',
+                message: `Ваш баланс: ${usdtBalance.toFixed(2)} USDT. Бажаєте замовити виплату чеком CryptoBot?`,
+                buttons: [
+                    {id: 'withdraw', type: 'default', text: 'Замовити виплату'},
+                    {id: 'cancel', type: 'destructive', text: 'Скасувати'}
+                ]
+            }, function(buttonId) {
+                if (buttonId === 'withdraw') {
+                    tg.showAlert("Запит надіслано! Напишіть адміністратору ваш ID для отримання USDT.");
+                }
+            });
+        }
     </script>
 </body>
-</html>
+    </html>
