@@ -2,113 +2,217 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gardenrouse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Gardenrouse Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://sad.adsgram.ai/js/adsgram-ads.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0fdf4; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f2faf2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+        .app-container { position: relative; width: 100%; height: 100%; }
+        #plant-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1; }
         
-        /* Стиль балансу як на твоєму скріншоті */
-        #balance-header { width: 100%; display: flex; justify-content: center; gap: 10px; padding: 20px 0; }
-        .score-pill { background: white; padding: 10px 20px; border-radius: 30px; border: 2px solid #ffd700; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 5px; }
+        .score-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 18px;
+            color: #2e7d32;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
 
-        /* Контейнер для картинки (по центру) */
-        #flower-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
-        #flower-img { width: 80%; max-width: 300px; height: auto; }
+        .button-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
+        }
 
-        /* Кнопка в самому низу */
-        #controls { padding-bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        .btn-water { background: #22c55e; color: white; border: none; padding: 20px 0; width: 85%; font-size: 24px; border-radius: 20px; cursor: pointer; box-shadow: 0 6px 0 #16a34a; font-weight: bold; }
-        .btn-water:active { transform: translateY(3px); box-shadow: 0 3px 0 #16a34a; }
-        .btn-water:disabled { background: #94a3b8; box-shadow: 0 6px 0 #64748b; }
-        #timer { margin-bottom: 10px; color: #ef4444; font-weight: bold; font-size: 18px; height: 20px; }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+        }
+
+        .btn:disabled { background-color: #9e9e9e; transform: scale(0.98); cursor: not-allowed; }
+
+        #timer {
+            font-size: 14px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 12px;
+            font-weight: 600;
+            display: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <div class="app-container">
+        <img id="plant-img" src="stage_1_cat.png">
+        <div id="score-container" class="score-panel"></div>
 
-<div id="balance-header">
-    <div class="score-pill">🌹 <span id="rose-bal">0</span></div>
-    <div class="score-pill">💰 <span id="usdt-bal">0.000</span> USDT</div>
-</div>
+        <div class="button-panel">
+            <div id="timer"></div>
+            <button id="water-btn" class="btn" onclick="startWatering()">💧 Полити</button>
+        </div>
+    </div>
 
-<div id="flower-container">
-    <img id="flower-img" src="stage_1_cat.png" alt="Flower">
-</div>
+    <script>
+        const ADSGRAM_BLOCK_ID = "26373"
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
 
-<div id="controls">
-    <div id="timer"></div>
-    <button id="water-btn" class="btn-water">💧 Полити</button>
-</div>
+        // КОНФІГУРАЦІЯ РІВНІВ
+        const levels = {
+            1: { goal: 50, nextBreak: 0 },
+            2: { goal: 150, nextBreak: 3600 }, // 1 година після Level 2
+            3: { goal: 300, nextBreak: 3600 }, // 1 година після Level 3
+            4: { goal: 500, nextBreak: 14400 }, // 4 години після Level 4
+            5: { goal: 1000, nextBreak: 0 },
+            6: { goal: 0, isFinal: true }
+        };
 
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+        let points = parseInt(localStorage.getItem('rose_points')) || 0;
+        let currentStage = parseInt(localStorage.getItem('garden_stage')) || 1;
+        let lastCompletionDate = localStorage.getItem('last_completion_date') || "";
 
-    // === ТУТ ТВІЙ ID ===
-    const ADSGRAM_BLOCK_ID = "26373"; 
+        updateUI();
+        checkGlobalCooldown();
 
-    let level = parseInt(localStorage.getItem('g_lvl')) || 1;
-    let rose = parseInt(localStorage.getItem('g_rose')) || 0;
-    let usdt = parseFloat(localStorage.getItem('g_usdt')) || 0;
-    let next = parseInt(localStorage.getItem('g_time')) || 0;
+        function updateUI() {
+            const plantImg = document.getElementById('plant-img');
+            const scoreContainer = document.getElementById('score-container');
+            const btn = document.getElementById('water-btn');
 
-    const img = document.getElementById('flower-img');
-    const btn = document.getElementById('water-btn');
-    const timerText = document.getElementById('timer');
+            plantImg.src = `stage_${currentStage}_cat.png`;
 
-    function update() {
-        document.getElementById('rose-bal').innerText = rose;
-        document.getElementById('usdt-bal').innerText = usdt.toFixed(3);
-        img.src = `stage_${level}_cat.png`; // Авто-шлях до картинки
-        
-        const now = Date.now();
-        if (now < next) {
-            btn.disabled = true;
-            startCountdown();
-        } else {
-            btn.disabled = false;
-        }
-    }
-
-    function startCountdown() {
-        const itv = setInterval(() => {
-            const rem = Math.round((next - Date.now()) / 1000);
-            if (rem <= 0) {
-                clearInterval(itv);
-                update();
+            if (levels[currentStage].isFinal) {
+                scoreContainer.innerHTML = `🌸 Букет зібрано!`;
+                btn.innerText = "Чекаємо завтра";
+                btn.disabled = true;
             } else {
-                let m = Math.floor(rem / 60);
-                let s = rem % 60;
-                timerText.innerText = `До поливу: ${m}:${s < 10 ? '0' : ''}${s}`;
+                scoreContainer.innerHTML = `🌸 Rose:<span id="points">${points}</span>/${levels[currentStage].goal}`;
+                btn.innerText = "💧 Полити";
             }
-        }, 1000);
-    }
+        }
 
-    btn.onclick = async () => {
-        if (window.Adsgram) {
-            const ad = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
-            try {
-                const res = await ad.show();
-                if (res.done) { award(); }
-            } catch (e) { award(); } 
-        } else { award(); }
-    };
+        function startWatering() {
+            const btn = document.getElementById('water-btn');
+            const timerDisplay = document.getElementById('timer');
 
-    function award() {
-        rose += 10;
-        usdt += 0.003;
-        if (level < 6) level++;
-        next = Date.now() + 3600000; // 1 година
+            // 1. Перевірка на новий день (якщо вже зібрали букет)
+            const today = new Date().toLocaleDateString();
+            if (currentStage === 6 && lastCompletionDate === today) {
+                tg.showAlert("Сьогодні врожай вже зібрано! Приходь завтра 🌱");
+                return;
+            }
 
-        localStorage.setItem('g_lvl', level);
-        localStorage.setItem('g_rose', rose);
-        localStorage.setItem('g_usdt', usdt);
-        localStorage.setItem('g_time', next);
-        update();
-    }
+            // Нараховуємо бали
+            points += 10;
 
-    update();
-</script>
+            // Логіка переходу
+            if (points >= levels[currentStage].goal && !levels[currentStage].isFinal) {
+                const breakTime = levels[currentStage].nextBreak;
+                
+                if (breakTime > 0) {
+                    // Встановлюємо велику перерву
+                    const unlockTime = Date.now() + (breakTime * 1000);
+                    localStorage.setItem('unlock_time', unlockTime);
+                }
+
+                currentStage++;
+                points = 0;
+
+                if (currentStage === 6) {
+                    lastCompletionDate = new Date().toLocaleDateString();
+                    localStorage.setItem('last_completion_date', lastCompletionDate);
+                    tg.showAlert("✨ Неймовірно! Ти виростила прекрасний букет! Обмін на USDT скоро...");
+                } else {
+                    tg.showAlert(`Рівень ${currentStage-1} пройдено! Потрібен час для росту...`);
+                }
+                
+                localStorage.setItem('garden_stage', currentStage);
+            }
+
+            localStorage.setItem('rose_points', points);
+            updateUI();
+
+            // Звичайна перерва між поливами (3 хв)
+            startTimer(180); 
+        }
+
+        function startTimer(seconds) {
+            const btn = document.getElementById('water-btn');
+            const timerDisplay = document.getElementById('timer');
+            
+            btn.disabled = true;
+            timerDisplay.style.display = 'block';
+
+            let timeLeft = seconds;
+            const interval = setInterval(() => {
+                timeLeft--;
+                let m = Math.floor(timeLeft / 60);
+                let s = timeLeft % 60;
+                timerDisplay.innerText = `Наступний полив: ${m}:${s < 10 ? '0' : ''}${s}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    checkGlobalCooldown(); // Перевіряємо, чи не діє ще велика перерва
+                }
+            }, 1000);
+        }
+
+        function checkGlobalCooldown() {
+            const btn = document.getElementById('water-btn');
+            const timerDisplay = document.getElementById('timer');
+            const unlockTime = parseInt(localStorage.getItem('unlock_time')) || 0;
+            const now = Date.now();
+
+            if (unlockTime > now) {
+                btn.disabled = true;
+                timerDisplay.style.display = 'block';
+                
+                let timeLeft = Math.floor((unlockTime - now) / 1000);
+                const globalInterval = setInterval(() => {
+                    timeLeft--;
+                    let h = Math.floor(timeLeft / 3600);
+                    let m = Math.floor((timeLeft % 3600) / 60);
+                    let s = timeLeft % 60;
+                    timerDisplay.innerText = `Ріст триває: ${h}г ${m}хв ${s}с`;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(globalInterval);
+                        btn.disabled = false;
+                        timerDisplay.style.display = 'none';
+                        localStorage.removeItem('unlock_time');
+                    }
+                }, 1000);
+            } else {
+                btn.disabled = false;
+                timerDisplay.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
