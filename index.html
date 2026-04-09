@@ -7,34 +7,36 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/adsgram-ads.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; color: #166534; }
+        body { font-family: sans-serif; background: #f0fdf4; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        .header-stats { display: flex; justify-content: space-between; width: 90%; margin-top: 20px; }
-        .stat-box { background: white; padding: 10px 15px; border-radius: 20px; border: 2px solid #ffcc00; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        /* Стиль балансу як на твоєму скріншоті */
+        #balance-header { width: 100%; display: flex; justify-content: center; gap: 10px; padding: 20px 0; }
+        .score-pill { background: white; padding: 10px 20px; border-radius: 30px; border: 2px solid #ffd700; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 5px; }
 
-        #flower-container { margin-top: 50px; flex-grow: 1; display: flex; align-items: center; }
-        #flower-img { width: 300px; height: auto; transition: transform 0.3s; }
+        /* Контейнер для картинки (по центру) */
+        #flower-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+        #flower-img { width: 80%; max-width: 300px; height: auto; }
 
-        .controls { margin-bottom: 50px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .btn-water { background: #22c55e; color: white; border: none; padding: 20px 60px; font-size: 22px; border-radius: 25px; cursor: pointer; box-shadow: 0 6px 0 #16a34a; font-weight: bold; width: 80%; }
+        /* Кнопка в самому низу */
+        #controls { padding-bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .btn-water { background: #22c55e; color: white; border: none; padding: 20px 0; width: 85%; font-size: 24px; border-radius: 20px; cursor: pointer; box-shadow: 0 6px 0 #16a34a; font-weight: bold; }
         .btn-water:active { transform: translateY(3px); box-shadow: 0 3px 0 #16a34a; }
-        .btn-water:disabled { background: #94a3b8; box-shadow: 0 6px 0 #64748b; opacity: 0.7; }
-
-        #timer { color: #ef4444; font-weight: bold; font-size: 18px; height: 25px; }
+        .btn-water:disabled { background: #94a3b8; box-shadow: 0 6px 0 #64748b; }
+        #timer { margin-bottom: 10px; color: #ef4444; font-weight: bold; font-size: 18px; height: 20px; }
     </style>
 </head>
 <body>
 
-<div class="header-stats">
-    <div class="stat-box">🌹 <span id="rose-bal">0</span> Rose</div>
-    <div class="stat-box">💰 <span id="usdt-bal">0.000</span> USDT</div>
+<div id="balance-header">
+    <div class="score-pill">🌹 <span id="rose-bal">0</span></div>
+    <div class="score-pill">💰 <span id="usdt-bal">0.000</span> USDT</div>
 </div>
 
 <div id="flower-container">
     <img id="flower-img" src="img/stage_1_cat.png" alt="Flower">
 </div>
 
-<div class="controls">
+<div id="controls">
     <div id="timer"></div>
     <button id="water-btn" class="btn-water">💧 Полити</button>
 </div>
@@ -43,51 +45,42 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // ВСТАВ СВІЙ ID ТУТ
+    // === ТУТ ТВІЙ ID ===
     const ADSGRAM_BLOCK_ID = "26373"; 
 
     let level = parseInt(localStorage.getItem('g_lvl')) || 1;
-    let roseBalance = parseInt(localStorage.getItem('g_rose')) || 0;
-    let usdtBalance = parseFloat(localStorage.getItem('g_usdt')) || 0;
-    let nextTime = parseInt(localStorage.getItem('g_time')) || 0;
+    let rose = parseInt(localStorage.getItem('g_rose')) || 0;
+    let usdt = parseFloat(localStorage.getItem('g_usdt')) || 0;
+    let next = parseInt(localStorage.getItem('g_time')) || 0;
 
     const img = document.getElementById('flower-img');
     const btn = document.getElementById('water-btn');
-    const roseDisp = document.getElementById('rose-bal');
-    const usdtDisp = document.getElementById('usdt-bal');
-    const timerDisp = document.getElementById('timer');
+    const timerText = document.getElementById('timer');
 
-    const images = [
-        "img/stage_1_cat.png", "img/stage_2_cat.png", "img/stage_3_cat.png",
-        "img/stage_4_cat.png", "img/stage_5_cat.png", "img/stage_6_cat.png"
-    ];
-
-    function updateUI() {
-        roseDisp.innerText = roseBalance;
-        usdtDisp.innerText = usdtBalance.toFixed(3);
-        if(images[level-1]) img.src = images[level-1];
+    function update() {
+        document.getElementById('rose-bal').innerText = rose;
+        document.getElementById('usdt-bal').innerText = usdt.toFixed(3);
+        img.src = `img/stage_${level}_cat.png`; // Авто-шлях до картинки
         
         const now = Date.now();
-        if (now < nextTime) {
+        if (now < next) {
             btn.disabled = true;
-            startTimer();
+            startCountdown();
         } else {
             btn.disabled = false;
-            timerDisp.innerText = "";
         }
     }
 
-    function startTimer() {
+    function startCountdown() {
         const itv = setInterval(() => {
-            const rem = Math.round((nextTime - Date.now()) / 1000);
+            const rem = Math.round((next - Date.now()) / 1000);
             if (rem <= 0) {
                 clearInterval(itv);
-                btn.disabled = false;
-                timerDisp.innerText = "";
+                update();
             } else {
                 let m = Math.floor(rem / 60);
                 let s = rem % 60;
-                timerDisp.innerText = `До поливу: ${m}:${s < 10 ? '0' : ''}${s}`;
+                timerText.innerText = `До поливу: ${m}:${s < 10 ? '0' : ''}${s}`;
             }
         }, 1000);
     }
@@ -97,34 +90,25 @@
             const ad = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
             try {
                 const res = await ad.show();
-                if (res.done) { successAction(); }
-            } catch (e) {
-                // Якщо реклама не спрацювала, даємо бонус за спробу, але менше (опціонально)
-                successAction();
-            }
-        } else {
-            successAction();
-        }
+                if (res.done) { award(); }
+            } catch (e) { award(); } 
+        } else { award(); }
     };
 
-    function successAction() {
-        roseBalance += 10;
-        usdtBalance += 0.003;
-        
-        if (level < 6) {
-            level++;
-            // Повертаємо нормальний час (1 год = 3600000 мс)
-            nextTime = Date.now() + 3600000; 
-        }
+    function award() {
+        rose += 10;
+        usdt += 0.003;
+        if (level < 6) level++;
+        next = Date.now() + 3600000; // 1 година
 
         localStorage.setItem('g_lvl', level);
-        localStorage.setItem('g_rose', roseBalance);
-        localStorage.setItem('g_usdt', usdtBalance);
-        localStorage.setItem('g_time', nextTime);
-        updateUI();
+        localStorage.setItem('g_rose', rose);
+        localStorage.setItem('g_usdt', usdt);
+        localStorage.setItem('g_time', next);
+        update();
     }
 
-    updateUI();
+    update();
 </script>
 </body>
 </html>
