@@ -319,6 +319,9 @@ function showRules() {
 }
 
 function claimBonus() {
+    // Визначаємо об'єкт Telegram, щоб не було помилок
+    const webApp = window.Telegram.WebApp;
+
     try {
         const lastBonus = localStorage.getItem('lastBonusTime');
         const now = Date.now();
@@ -327,33 +330,39 @@ function claimBonus() {
         if (lastBonus && (now - parseInt(lastBonus) < dayInMs)) {
             const timeLeft = dayInMs - (now - parseInt(lastBonus));
             const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-            tg.showAlert("Бонус уже отримано! Повертайтеся через " + hours + " год.");
+            webApp.showAlert("Бонус уже отримано! Повертайся через " + hours + " год.");
             return;
         }
 
-        // 1. Додаємо до змінної score
+        // ПЕРЕВІРКА: якщо score не існує або він порожній, робимо його нулем
+        if (typeof score === 'undefined' || score === null) {
+            score = 0;
+        }
+
+        // Додаємо бонус
         score += 10;
 
-        // 2. ПРЯМЕ оновлення тексту на екрані (шукаємо твій контейнер з Rose)
-        const scoreElement = document.getElementById('score'); // Перевір, чи такий ID у твоїх Rose
+        // Оновлюємо текст на екрані
+        // У Gardenrouse ми зазвичай шукаємо елемент з id="score"
+        const scoreElement = document.getElementById('score');
         if (scoreElement) {
             scoreElement.innerText = Math.floor(score);
         }
 
-        // 3. Виклик твоєї загальної функції оновлення (якщо вона є)
+        // Викликаємо функцію оновлення, якщо вона є в твоєму коді
         if (typeof updateDisplay === 'function') {
             updateDisplay();
-        } else if (typeof updateUI === 'function') {
-            updateUI();
         }
 
         localStorage.setItem('lastBonusTime', now.toString());
-        tg.showAlert("Вітаємо! Ви отримали +10 🌹");
-        
+        webApp.showAlert("Вітаємо! Ви отримали +10 🌹");
+
     } catch (e) {
-        tg.showAlert("Помилка: " + e.message);
+        // Якщо все одно буде помилка, ми побачимо її текст
+        webApp.showAlert("Помилка бонусу: " + e.message);
     }
-        }
+}
+        
     </script>
 </body>
     </html>
