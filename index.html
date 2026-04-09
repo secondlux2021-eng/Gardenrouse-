@@ -318,14 +318,13 @@ function showRules() {
     });
 }
 
-function claimBonus() {
+ function claimBonus() {
     const webApp = window.Telegram.WebApp;
     try {
         const lastBonus = localStorage.getItem('lastBonusTime');
         const now = Date.now();
         const dayInMs = 24 * 60 * 60 * 1000;
 
-        // Перевірка часу
         if (lastBonus && (now - parseInt(lastBonus) < dayInMs)) {
             const timeLeft = dayInMs - (now - parseInt(lastBonus));
             const hours = Math.floor(timeLeft / (1000 * 60 * 60));
@@ -333,26 +332,28 @@ function claimBonus() {
             return;
         }
 
-        // ПЕРЕВІРКА: додаємо саме до points
+        // 1. Додаємо 5 балів до твоєї змінної points
         if (typeof points !== 'undefined') {
             points += 10;
         } else {
-            // Якщо раптом points не глобальна, створюємо її
-            window.points = (window.points || 0) + 10;
+            points = 10;
         }
 
-        // Оновлюємо екран через твою функцію
-        if (typeof updateDisplay === 'function') {
-            updateDisplay();
+        // 2. Оновлюємо текст безпосередньо в score-panel
+        const panel = document.querySelector('.score-panel');
+        if (panel) {
+            // Оновлюємо вміст, зберігаючи емодзі троянди
+            panel.innerHTML = '🌹 ' + Math.floor(points);
         }
 
+        // 3. Зберігаємо час отримання
         localStorage.setItem('lastBonusTime', now.toString());
         webApp.showAlert("Вітаємо! Ви отримали +10 🌹");
 
     } catch (e) {
-        webApp.showAlert("Помилка бонусу: " + e.message);
+        webApp.showAlert("Помилка: " + e.message);
     }
-}
+            }
         
     </script>
 </body>
