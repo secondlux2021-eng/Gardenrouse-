@@ -319,22 +319,37 @@ function showRules() {
 }
 
 function claimBonus() {
-    const lastBonus = localStorage.getItem('lastBonusTime');
-    const now = Date.now();
-    const dayInMs = 24 * 60 * 60 * 1000;
+    try {
+        const lastBonus = localStorage.getItem('lastBonusTime');
+        const now = Date.now();
+        const dayInMs = 24 * 60 * 60 * 1000;
 
-    if (lastBonus && (now - lastBonus < dayInMs)) {
-        const timeLeft = dayInMs - (now - lastBonus);
-        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        tg.showAlert("Бонус уже отримано! Повертайтеся через " + hours + " год. " + minutes + " хв.");
-        return;
+        // Перевірка на час
+        if (lastBonus && (now - parseInt(lastBonus) < dayInMs)) {
+            const timeLeft = dayInMs - (now - parseInt(lastBonus));
+            const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+            window.Telegram.WebApp.showAlert("Бонус уже отримано! Зачекайте ще " + hours + " год.");
+            return;
+        }
+
+        // Додаємо бали
+        score = (typeof score !== 'undefined') ? score + 5 : 5;
+        
+        // Оновлюємо екран (викликаємо твою функцію оновлення)
+        if (typeof updateDisplay === 'function') {
+            updateDisplay();
+        }
+
+        // Зберігаємо час
+        localStorage.setItem('lastBonusTime', now.toString());
+        
+        // Показуємо успіх
+        window.Telegram.WebApp.showAlert("Вітаємо! Ви отримали +5 🌹");
+        
+    } catch (e) {
+        // Якщо сталася помилка, ми її побачимо
+        alert("Помилка бонусу: " + e.message);
     }
-
-    score += 100; // Нараховуємо 100 Rose
-    updateDisplay(); // Оновлюємо цифри на екрані
-    localStorage.setItem('lastBonusTime', now);
-    tg.showAlert("Вітаємо! Ви отримали щоденний бонус: 100 🌹");
 }
     </script>
 </body>
