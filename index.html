@@ -33,7 +33,7 @@
 </div>
 
 <div id="flower-container">
-    <img id="flower-img" src="img/stage_1_cat.png" alt="Flower">
+    <img id="flower-img" src="stage_1_cat.png" alt="Flower">
 </div>
 
 <div id="controls">
@@ -60,7 +60,7 @@
     function update() {
         document.getElementById('rose-bal').innerText = rose;
         document.getElementById('usdt-bal').innerText = usdt.toFixed(3);
-        img.src = `img/stage_${level}_cat.png`; // Авто-шлях до картинки
+        img.src = `stage_${level}_cat.png`; // Авто-шлях до картинки
         
         const now = Date.now();
         if (now < next) {
