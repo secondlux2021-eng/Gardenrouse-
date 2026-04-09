@@ -6,9 +6,16 @@
     <title>Gardenrouse Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f2faf2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { 
+            margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; 
+            background-color: #f2faf2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            -webkit-font-smoothing: antialiased; 
+        }
         .app-container { position: relative; width: 100%; height: 100%; }
-        #plant-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1; }
+        #plant-img { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            object-fit: cover; display: block; z-index: 1; 
+        }
         
         .score-panel {
             position: absolute;
@@ -49,7 +56,10 @@
             align-items: center;
             gap: 10px;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
+            transition: transform 0.1s;
         }
+
+        .btn:active { transform: scale(0.95); }
         .btn:disabled { background-color: #9e9e9e; transform: scale(1); cursor: not-allowed; }
 
         #timer {
@@ -81,6 +91,7 @@
         tg.expand();
         tg.ready();
 
+        // КОНФІГУРАЦІЯ РІВНІВ
         const levels = {
             1: { goal: 50, nextBreak: 0 },
             2: { goal: 150, nextBreak: 3600 }, 
@@ -95,7 +106,7 @@
         let lastCompletionDate = localStorage.getItem('last_completion_date') || "";
         let timerInterval = null;
 
-        // Початкове оновлення екрану та перевірка таймерів
+        // Ініціалізація інтерфейсу
         updateUI();
         checkCooldown();
 
@@ -117,21 +128,98 @@
         }
 
         function handleWatering() {
-            // Вібровідгук Telegram
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            // Вібровідгук для Telegram
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
 
+            // Перевірка на фінальну стадію (новий день)
             const today = new Date().toLocaleDateString();
             if (currentStage === 6 && lastCompletionDate === today) {
                 tg.showAlert("Сьогодні врожай вже зібрано! Приходь завтра 🌱");
                 return;
             }
 
+            // Нарахування балів
             points += 10;
-            let nextUnlockDelay = 180; // Стандартні 3 хвилини
+            let nextUnlockDelay = 180; // Стандартна пауза 3 хв (180 сек)
 
-            // Перевірка переходу на новий рівень
-            if (points >= levels[currentStage].goal && !levels[currentStage].isFinal) {
+            // Логіка переходу на новий рівень
+            if (!levels[currentStage].isFinal && points >= levels[currentStage].goal) {
                 const breakTime = levels[currentStage].nextBreak;
-                if (breakTime > 0) nextUnlockDelay = breakTime;
+                
+                if (breakTime > 0) {
+                    nextUnlockDelay = breakTime; 
+                }
 
                 currentStage++;
+                points = 0;
+
+                if (currentStage === 6) {
+                    lastCompletionDate = new Date().toLocaleDateString();
+                    localStorage.setItem('last_completion_date', lastCompletionDate);
+                    tg.showAlert("✨ Неймовірно! Ти виростила прекрасний букет!");
+                } else {
+                    tg.showAlert(`Рівень ${currentStage-1} пройдено! Троянда має підрости...`);
+                }
+                
+                localStorage.setItem('garden_stage', currentStage);
+            }
+
+            // Зберігаємо прогрес та час наступного розблокування
+            const unlockTime = Date.now() + (nextUnlockDelay * 1000);
+            localStorage.setItem('unlock_time', unlockTime);
+            localStorage.setItem('rose_points', points);
+            
+            updateUI();
+            checkCooldown(); 
+        }
+
+        function checkCooldown() {
+            const btn = document.getElementById('water-btn');
+            const timerDisplay = document.getElementById('timer');
+            const unlockTime = parseInt(localStorage.getItem('unlock_time')) || 0;
+            const now = Date.now();
+
+            if (unlockTime > now) {
+                // Очищуємо попередній інтервал, щоб не було накладання
+                clearInterval(timerInterval);
+                btn.disabled = true;
+                timerDisplay.style.display = 'block';
+
+                timerInterval = setInterval(() => {
+                    const currentTime = Date.now();
+                    const timeLeft = Math.floor((unlockTime - currentTime) / 1000);
+
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        timerDisplay.style.display = 'none';
+                        btn.disabled = false;
+                        localStorage.removeItem('unlock_time');
+                        updateUI();
+                        return;
+                    }
+
+                    // Гарне відображення часу
+                    if (timeLeft > 300) { 
+                        let h = Math.floor(timeLeft / 3600);
+                        let m = Math.floor((timeLeft % 3600) / 60);
+                        let s = timeLeft % 60;
+                        timerDisplay.innerText = `Ріст триває: ${h}г ${m}хв ${s}с`;
+                    } else {
+                        let m = Math.floor(timeLeft / 60);
+                        let s = timeLeft % 60;
+                        timerDisplay.innerText = `Наступний полив: ${m}:${s < 10 ? '0' : ''}${s}`;
+                    }
+                }, 1000);
+            } else {
+                // Якщо час вийшов або кулдауну немає
+                if (!levels[currentStage].isFinal) {
+                    btn.disabled = false;
+                }
+                timerDisplay.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
